@@ -16,8 +16,14 @@ from src.utils import set_seed
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def run(args: DictConfig):
+    # 以下の記事に従って変更を加えた
+    # https://qiita.com/sugulu_Ogawa_ISID/items/62f5f7adee083d96a587
+    torch.backends.cudnn.benchmark = True
+
     set_seed(args.seed)
     logdir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
+
+    scaler = torch.cuda.amp.GradScaler()
     
     if args.use_wandb:
         wandb.init(mode="online", dir=logdir, project="MEG-classification")
@@ -25,7 +31,11 @@ def run(args: DictConfig):
     # ------------------
     #    Dataloader
     # ------------------
-    loader_args = {"batch_size": args.batch_size, "num_workers": args.num_workers}
+    loader_args = {
+        "batch_size": args.batch_size,
+        "num_workers": args.num_workers,
+        "pin_memory": True,
+    }
     
     train_set = ThingsMEGDataset("train", args.data_dir)
     train_loader = torch.utils.data.DataLoader(train_set, shuffle=True, **loader_args)
@@ -63,16 +73,26 @@ def run(args: DictConfig):
         
         model.train()
         for X, y, subject_idxs in tqdm(train_loader, desc="Train"):
-            X, y = X.to(args.device), y.to(args.device)
+            X, y = X.to(args.device, non_blocking=True), y.to(args.device, non_blocking=True)
 
-            y_pred = model(X)
-            
-            loss = F.cross_entropy(y_pred, y)
+
+            # Runs the forward pass with autocasting.
+            with torch.cuda.amp.autocast():
+                y_pred = model(X)
+                loss = F.cross_entropy(y_pred, y)
+
             train_loss.append(loss.item())
             
             optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+
+            # Scales loss.  Calls backward() on scaled loss to create scaled gradients.
+            scaler.scale(loss).backward()
+
+            # scaler.step() first unscales the gradients of the optimizer's assigned params.
+            scaler.step(optimizer)
+
+            # Updates the scale for next iteration.
+            scaler.update()
             
             acc = accuracy(y_pred, y)
             train_acc.append(acc.item())
