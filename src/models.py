@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops.layers.torch import Rearrange
+from torchinfo import summary
 
 
 class BasicConvClassifier(nn.Module):
@@ -138,3 +139,14 @@ class NewConvClassifier(nn.Module):
         X = self.blocks(X)
 
         return self.head(X)
+
+
+if __name__ == "__main__":
+    model = NewConvClassifier(num_classes=1854, seq_len=281, in_channels=271)
+    batch_size = 128
+
+    summary(
+        model,
+        input_size=(batch_size, 1854, 271, 281),
+        col_names=["output_size", "num_params"],
+    )
