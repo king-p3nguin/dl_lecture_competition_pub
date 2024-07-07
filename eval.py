@@ -12,7 +12,7 @@ from torchmetrics import Accuracy
 from tqdm import tqdm
 
 from src.datasets import ThingsMEGDataset
-from src.models import BasicConvClassifier
+from src.models import NewConvClassifier
 from src.utils import set_seed
 
 
@@ -36,7 +36,7 @@ def run(args: DictConfig):
     # ------------------
     #       Model
     # ------------------
-    model = BasicConvClassifier(
+    model = NewConvClassifier(
         test_set.num_classes, test_set.seq_len, test_set.num_channels
     ).to(args.device)
     model.load_state_dict(torch.load(args.model_path, map_location=args.device))

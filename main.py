@@ -2,9 +2,12 @@ import os
 import sys
 
 import hydra
+import hydra.core.hydra_config
 import numpy as np
 import torch
+import torch.backends.cudnn
 import torch.nn.functional as F
+import torch.utils.data
 import wandb
 from omegaconf import DictConfig
 from termcolor import cprint
@@ -12,7 +15,7 @@ from torchmetrics import Accuracy
 from tqdm import tqdm
 
 from src.datasets import ThingsMEGDataset
-from src.models import BasicConvClassifier
+from src.models import NewConvClassifier
 from src.utils import set_seed
 
 
@@ -44,17 +47,12 @@ def run(args: DictConfig):
     val_set = ThingsMEGDataset("val", args.data_dir)
     val_loader = torch.utils.data.DataLoader(val_set, shuffle=False, **loader_args)
     test_set = ThingsMEGDataset("test", args.data_dir)
-    test_loader = torch.utils.data.DataLoader(
-        test_set,
-        shuffle=False,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-    )
+    test_loader = torch.utils.data.DataLoader(test_set, shuffle=False, **loader_args)
 
     # ------------------
     #       Model
     # ------------------
-    model = BasicConvClassifier(
+    model = NewConvClassifier(
         train_set.num_classes, train_set.seq_len, train_set.num_channels
     ).to(args.device)
 
