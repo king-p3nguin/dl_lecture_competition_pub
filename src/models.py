@@ -144,11 +144,13 @@ if __name__ == "__main__":
     from torchinfo import summary
 
     batch_size = 128
-    num_classes=1854
-    seq_len=281
-    in_channels=271
+    num_classes = 1854
+    seq_len = 281
+    in_channels = 271
 
-    model = NewConvClassifier(num_classes=num_classes, seq_len=seq_len, in_channels=in_channels)
+    model = NewConvClassifier(
+        num_classes=num_classes, seq_len=seq_len, in_channels=in_channels
+    )
 
     summary(
         model,
