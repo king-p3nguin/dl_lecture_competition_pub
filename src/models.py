@@ -93,10 +93,8 @@ class NewConvBlock(nn.Module):
         self.in_dim = in_dim
         self.out_dim = out_dim
 
-        self.conv0 = nn.Conv2d(in_dim, out_dim, kernel_size, padding="same", bias=False)
-        self.conv1 = nn.Conv2d(
-            out_dim, out_dim, kernel_size, padding="same", bias=False
-        )
+        self.conv0 = nn.Conv2d(in_dim, out_dim, kernel_size, padding="same")
+        self.conv1 = nn.Conv2d(out_dim, out_dim, kernel_size, padding="same")
         # self.conv2 = nn.Conv1d(out_dim, out_dim, kernel_size) # , padding="same")
 
         self.batchnorm0 = nn.BatchNorm2d(num_features=out_dim)
@@ -125,11 +123,11 @@ class NewConvBlock(nn.Module):
 
 class NewConvClassifier(nn.Module):
     def __init__(
-        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 128
+        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 64
     ) -> None:
         super().__init__()
 
-        self.spec = T.Spectrogram(n_fft=64, win_length=20, hop_length=4)
+        self.spec = T.Spectrogram(n_fft=64, win_length=32, hop_length=3)
 
         self.blocks = nn.Sequential(
             NewConvBlock(in_channels, hid_dim),
@@ -137,7 +135,7 @@ class NewConvClassifier(nn.Module):
         )
 
         self.head = nn.Sequential(
-            nn.AdaptiveAvgPool2d((128, 128)),
+            nn.AdaptiveAvgPool2d(hid_dim),
             nn.Linear(hid_dim, num_classes),
         )
 
@@ -171,6 +169,18 @@ if __name__ == "__main__":
     num_classes = 1854
     seq_len = 281
     in_channels = 271
+
+    model = BasicConvClassifier(
+        num_classes=num_classes, seq_len=seq_len, in_channels=in_channels
+    )
+
+    summary(
+        model,
+        input_size=(batch_size, in_channels, seq_len),
+        col_names=["input_size", "output_size", "num_params", "mult_adds"],
+        depth=3,
+        row_settings=["var_names"],
+    )
 
     model = NewConvClassifier(
         num_classes=num_classes, seq_len=seq_len, in_channels=in_channels
