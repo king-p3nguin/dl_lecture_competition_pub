@@ -1,8 +1,12 @@
+import logging
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchaudio.transforms as T
 from einops.layers.torch import Rearrange
+
+logger = logging.getLogger(__name__)
 
 
 class BasicConvClassifier(nn.Module):
@@ -83,6 +87,7 @@ class NewConvBlock(nn.Module):
         kernel_size: int = 3,
         p_drop: float = 0.5,
     ) -> None:
+        logger.debug(f"NewConvBlock: in_dim={in_dim}, out_dim={out_dim}")
         super().__init__()
 
         self.in_dim = in_dim
@@ -129,7 +134,10 @@ class NewConvClassifier(nn.Module):
             NewConvBlock(hid_dim, hid_dim),
         )
 
-        self.head = nn.Linear(hid_dim, num_classes)
+        self.head = nn.Sequential(
+            nn.AdaptiveAvgPool2d((128, 128)),
+            nn.Linear(hid_dim, num_classes),
+        )
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """_summary_
@@ -139,14 +147,23 @@ class NewConvClassifier(nn.Module):
             X ( b, num_classes ): _description_
         """
         X = self.spec(X)  # (b, c, win_length+1, t/hop_length)
+        logger.debug("spec: %s", X.shape)
 
         X = self.blocks(X)
+        logger.debug("blocks: %s", X.shape)
 
-        return self.head(X)
+        X = self.head(X)
+        logger.debug("head: %s", X.shape)
+        return X
 
 
 if __name__ == "__main__":
     from torchinfo import summary
+
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    if not logger.hasHandlers():
+        logger.addHandler(logging.StreamHandler())
 
     batch_size = 128
     num_classes = 1854
