@@ -90,7 +90,7 @@ def run(args: DictConfig):
 
             train_loss.append(loss.item())
 
-            optimizer.zero_grad()
+            optimizer.zero_grad(set_to_none=True)
 
             # Scales loss.  Calls backward() on scaled loss to create scaled gradients.
             scaler.scale(loss).backward()
