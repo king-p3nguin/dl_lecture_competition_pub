@@ -135,7 +135,10 @@ class NewConvClassifier(nn.Module):
         )
 
         self.head = nn.Sequential(
-            nn.AdaptiveAvgPool2d(hid_dim),
+            nn.AdaptiveAvgPool2d((hid_dim, 1)),
+            Rearrange("b c d 1 -> b c d"),
+            nn.AdaptiveAvgPool2d((hid_dim, 1)),
+            Rearrange("b c 1 -> b c"),
             nn.Linear(hid_dim, num_classes),
         )
 
