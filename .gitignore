@@ -6,6 +6,9 @@ preprocess.py
 eval_omnicampus.py
 .github/
 
+Pipfile
+Pipfile.lock
+
 # -------------------
 #   Python template
 # -------------------
