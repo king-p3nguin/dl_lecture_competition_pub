@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchaudio.transforms as T
 from einops.layers.torch import Rearrange
 
 
@@ -72,25 +73,29 @@ class ConvBlock(nn.Module):
         return self.dropout(X)
 
 
+# 参考：
+# https://github.com/torcheeg/torcheeg/blob/9c2c2dd333ca5a92ea7d255dc07a9525d2df803f/torcheeg/models/cnn/eegnet.py
 class NewConvBlock(nn.Module):
     def __init__(
         self,
         in_dim,
         out_dim,
         kernel_size: int = 3,
-        p_drop: float = 0.1,
+        p_drop: float = 0.5,
     ) -> None:
         super().__init__()
 
         self.in_dim = in_dim
         self.out_dim = out_dim
 
-        self.conv0 = nn.Conv1d(in_dim, out_dim, kernel_size, padding="same")
-        self.conv1 = nn.Conv1d(out_dim, out_dim, kernel_size, padding="same")
+        self.conv0 = nn.Conv2d(in_dim, out_dim, kernel_size, padding="same")
+        self.conv1 = nn.Conv2d(out_dim, out_dim, kernel_size, padding="same")
         # self.conv2 = nn.Conv1d(out_dim, out_dim, kernel_size) # , padding="same")
 
-        self.batchnorm0 = nn.BatchNorm1d(num_features=out_dim)
-        self.batchnorm1 = nn.BatchNorm1d(num_features=out_dim)
+        self.batchnorm0 = nn.BatchNorm2d(num_features=out_dim)
+        self.batchnorm1 = nn.BatchNorm2d(num_features=out_dim)
+
+        self.avgpool = nn.AvgPool2d(kernel_size=kernel_size)
 
         self.dropout = nn.Dropout(p_drop)
 
@@ -117,16 +122,14 @@ class NewConvClassifier(nn.Module):
     ) -> None:
         super().__init__()
 
+        self.spec = T.Spectrogram(n_fft=64, win_length=32, hop_length=3)
+
         self.blocks = nn.Sequential(
             NewConvBlock(in_channels, hid_dim),
             NewConvBlock(hid_dim, hid_dim),
         )
 
-        self.head = nn.Sequential(
-            nn.AdaptiveAvgPool1d(1),
-            Rearrange("b d 1 -> b d"),
-            nn.Linear(hid_dim, num_classes),
-        )
+        self.head = nn.Linear(hid_dim, num_classes)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """_summary_
@@ -135,6 +138,8 @@ class NewConvClassifier(nn.Module):
         Returns:
             X ( b, num_classes ): _description_
         """
+        X = self.spec(X)  # (b, c, win_length+1, t/hop_length)
+
         X = self.blocks(X)
 
         return self.head(X)
