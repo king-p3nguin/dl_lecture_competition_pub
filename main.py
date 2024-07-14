@@ -19,7 +19,7 @@ from src.models import NewConvClassifier
 from src.utils import set_seed
 
 # Avoid OOM error
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:1024"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")

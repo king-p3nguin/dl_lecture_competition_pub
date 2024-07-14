@@ -127,7 +127,7 @@ class NewConvClassifier(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.spec = T.Spectrogram(n_fft=64, win_length=32, hop_length=3)
+        self.spec = T.Spectrogram(n_fft=64, win_length=20, hop_length=4)
 
         self.blocks = nn.Sequential(
             NewConvBlock(in_channels, hid_dim),
