@@ -105,19 +105,19 @@ class NewConvBlock(nn.Module):
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         X = self.conv0(X)
-        X = F.relu(self.batchnorm0(X))
+        X = F.gelu(self.batchnorm0(X))
         X = self.avgpool(X)
         X = self.dropout(X)
         logger.debug(f"NewConvBlock layer1: {X.shape}")
 
         X = self.conv1(X)
-        X = F.relu(self.batchnorm1(X))
+        X = F.gelu(self.batchnorm1(X))
         X = self.avgpool(X)
         X = self.dropout(X)
         logger.debug(f"NewConvBlock layer2: {X.shape}")
 
         X = self.conv2(X)
-        X = F.relu(self.batchnorm2(X))
+        X = F.gelu(self.batchnorm2(X))
         X = self.avgpool(X)
         X = self.dropout(X)
         logger.debug(f"NewConvBlock layer3: {X.shape}")
@@ -132,7 +132,9 @@ class NewConvClassifier(nn.Module):
         super().__init__()
 
         # dim = [channel, 94, 94]
-        self.spec = T.Spectrogram(n_fft=186, win_length=32, hop_length=3)
+        self.spec = T.Spectrogram(
+            n_fft=186, win_length=32, hop_length=3, normalized=True
+        )
 
         self.blocks = NewConvBlock(in_channels, hid_dim)
 
