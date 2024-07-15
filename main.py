@@ -25,6 +25,9 @@ def run(args: DictConfig):
     # https://qiita.com/sugulu_Ogawa_ISID/items/62f5f7adee083d96a587
     torch.backends.cudnn.benchmark = True
 
+    # only for debugging
+    torch.autograd.set_detect_anomaly(True)
+
     set_seed(args.seed)
     logdir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
 

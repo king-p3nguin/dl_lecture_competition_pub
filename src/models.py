@@ -127,7 +127,7 @@ class NewConvBlock(nn.Module):
 
 class NewConvClassifier(nn.Module):
     def __init__(
-        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 271
+        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 128
     ) -> None:
         super().__init__()
 
