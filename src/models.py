@@ -126,13 +126,13 @@ class NewConvClassifier(nn.Module):
 
         self.blocks = nn.Sequential(
             T.Normalize(mean=0.5, std=0.5),  # to avoid nan during training
-            ConvBlock(in_channels, hid_dim, p_drop=0.5),
-            ConvBlock(hid_dim, hid_dim * 2, p_drop=0.5),
-            ConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.5),
+            NewConvBlock(in_channels, hid_dim, p_drop=0.5),
+            NewConvBlock(hid_dim, hid_dim * 2, p_drop=0.5),
+            NewConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.5),
         )
 
         self.head = nn.Sequential(
-            nn.AdaptiveMaxPool1d(1),
+            nn.AdaptiveAvgPool1d(1),
             Rearrange("b d 1 -> b d"),
             nn.Linear(hid_dim * 3, num_classes),
         )
@@ -165,7 +165,7 @@ class EEGNet(nn.Module):
     r"""
     Args:
         seq_len (int): Number of data points included in each EEG chunk, i.e., T in the paper.
-        num_electrodes (int): The number of electrodes, i.e., C in the paper.
+        in_channels (int): The number of electrodes, i.e., C in the paper.
         F1 (int): The filter number of block 1, i.e., F_1 in the paper.
         F2 (int): The filter number of block 2, i.e., F_2 in the paper.
         D (int): The depth multiplier (number of spatial filters), i.e., D in the paper.
@@ -179,8 +179,7 @@ class EEGNet(nn.Module):
         self,
         num_classes: int,
         seq_len: int,
-        num_electrodes: int,
-        hidden_dim: int = 128,
+        in_channels: int,
         F1: int = 8,
         F2: int = 16,
         D: int = 2,
@@ -189,9 +188,8 @@ class EEGNet(nn.Module):
         dropout: float = 0.25,
     ):
         super().__init__()
-        self.num_electrodes = num_electrodes
+        self.in_channels = in_channels
         self.seq_len = seq_len
-        self.F2 = F2
 
         self.block1 = nn.Sequential(
             nn.Conv2d(
@@ -206,7 +204,7 @@ class EEGNet(nn.Module):
             Conv2dWithConstraint(
                 in_channels=F1,
                 out_channels=F1 * D,
-                kernel_size=(num_electrodes, 1),
+                kernel_size=(in_channels, 1),
                 max_norm=1,
                 stride=1,
                 padding=(0, 0),
@@ -248,21 +246,22 @@ class EEGNet(nn.Module):
 
     def feature_dim(self):
         with torch.no_grad():
-            mock_eeg = torch.zeros(1, 1, self.num_electrodes, self.seq_len)
+            mock_eeg = torch.zeros(1, 1, self.in_channels, self.seq_len)
 
             mock_eeg = self.block1(mock_eeg)
             mock_eeg = self.block2(mock_eeg)
 
-        return self.F2 * mock_eeg.shape[3]
+        return mock_eeg.shape[1] * mock_eeg.shape[3]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         r"""
         Args:
-            x (torch.Tensor): EEG signal representation, the ideal input shape is [n, 60, 151]. Here, n corresponds to the batch size, 60 corresponds to num_electrodes, and 151 corresponds to seq_len.
+            x (torch.Tensor): EEG signal representation, the ideal input shape is [n, 60, 151]. Here, n corresponds to the batch size, 60 corresponds to in_channels, and 151 corresponds to seq_len.
 
         Returns:
             torch.Tensor[number of sample, number of classes]: the predicted probability that the samples belong to the classes.
         """
+        x = x.unsqueeze(1)
         x = self.block1(x)
         logger.debug(f"block1: {x.shape}")
         x = self.block2(x)
@@ -312,7 +311,7 @@ if __name__ == "__main__":
         row_settings=["var_names"],
     )
 
-    model = EEGNet(num_classes=num_classes, seq_len=seq_len, num_electrodes=in_channels)
+    model = EEGNet(num_classes=num_classes, seq_len=seq_len, in_channels=in_channels)
 
     summary(
         model,
