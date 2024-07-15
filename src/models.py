@@ -138,8 +138,9 @@ class NewConvClassifier(nn.Module):
         super().__init__()
 
         # dim = [channel, 94, 94]
-        self.spec = T.Spectrogram(
-            n_fft=186, win_length=32, hop_length=3, normalized=True
+        self.spec = nn.Sequential(
+            T.Spectrogram(n_fft=186, win_length=32, hop_length=3, normalized=True),
+            T.AmplitudeToDB(),
         )
 
         self.blocks = NewConvBlock(in_channels, hid_dim)
@@ -147,7 +148,9 @@ class NewConvClassifier(nn.Module):
 
         self.head = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(hid_dim * 8 * 8, num_classes),
+            nn.Linear(hid_dim * 8 * 8, 1024),
+            nn.GELU(),
+            nn.Linear(1024, num_classes),
         )
         self.head.apply(init_weights)
 
