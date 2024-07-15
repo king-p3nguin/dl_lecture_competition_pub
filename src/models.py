@@ -20,14 +20,15 @@ class BasicConvClassifier(nn.Module):
         super().__init__()
 
         self.blocks = nn.Sequential(
-            ConvBlock(in_channels, hid_dim),
-            ConvBlock(hid_dim, hid_dim),
+            ConvBlock(in_channels, hid_dim, p_drop=0.5),
+            ConvBlock(hid_dim, hid_dim * 2, p_drop=0.5),
+            ConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.5),
         )
 
         self.head = nn.Sequential(
             nn.AdaptiveAvgPool1d(1),
             Rearrange("b d 1 -> b d"),
-            nn.Linear(hid_dim, num_classes),
+            nn.Linear(hid_dim * 3, num_classes),
         )
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
@@ -134,7 +135,6 @@ class NewConvClassifier(nn.Module):
         self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 64
     ) -> None:
         super().__init__()
-        self.hid_dim = hid_dim
         self.seq_len = seq_len
         self.in_channels = in_channels
 
@@ -149,9 +149,7 @@ class NewConvClassifier(nn.Module):
 
         self.head = nn.Sequential(
             nn.Flatten(start_dim=1),
-            nn.Linear(self.feature_dim(), 1024),
-            nn.GELU(),
-            nn.Linear(1024, num_classes),
+            nn.Linear(self.feature_dim(), num_classes, bias=False),
         )
 
     def feature_dim(self):
@@ -296,9 +294,13 @@ class EEGNet(nn.Module):
             torch.Tensor[number of sample, number of classes]: the predicted probability that the samples belong to the classes.
         """
         x = self.block1(x)
+        logger.debug(f"block1: {x.shape}")
         x = self.block2(x)
+        logger.debug(f"block2: {x.shape}")
         x = x.flatten(start_dim=1)
+        logger.debug(f"flattened: {x.shape}")
         x = self.lin(x)
+        logger.debug(f"lin: {x.shape}")
 
         return x
 
@@ -340,12 +342,12 @@ if __name__ == "__main__":
         row_settings=["var_names"],
     )
 
-    # model = EEGNet(num_classes=num_classes, seq_len=seq_len, num_electrodes=in_channels)
+    model = EEGNet(num_classes=num_classes, seq_len=seq_len, num_electrodes=in_channels)
 
-    # summary(
-    #     model,
-    #     input_size=(batch_size, in_channels, seq_len),
-    #     col_names=["input_size", "output_size", "num_params", "mult_adds"],
-    #     depth=3,
-    #     row_settings=["var_names"],
-    # )
+    summary(
+        model,
+        input_size=(batch_size, in_channels, seq_len),
+        col_names=["input_size", "output_size", "num_params", "mult_adds"],
+        depth=3,
+        row_settings=["var_names"],
+    )
