@@ -82,7 +82,7 @@ class NewConvBlock(nn.Module):
         self,
         in_dim,
         out_dim,
-        kernel_size: int = 3,
+        kernel_size: int = 5,
         p_drop: float = 0.1,
     ) -> None:
         logger.debug(f"NewConvBlock: in_dim={in_dim}, out_dim={out_dim}")
@@ -93,20 +93,36 @@ class NewConvBlock(nn.Module):
 
         self.conv0 = nn.Conv2d(in_dim, out_dim, kernel_size)
         self.conv1 = nn.Conv2d(out_dim, out_dim, kernel_size)
+        self.conv2 = nn.Conv2d(out_dim, out_dim, kernel_size)
 
         self.batchnorm0 = nn.BatchNorm2d(num_features=out_dim)
         self.batchnorm1 = nn.BatchNorm2d(num_features=out_dim)
+        self.batchnorm2 = nn.BatchNorm2d(num_features=out_dim)
+
+        self.avgpool = nn.AvgPool2d(2)
 
         self.dropout = nn.Dropout(p_drop)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         X = self.conv0(X)
         X = F.gelu(self.batchnorm0(X))
+        X = self.avgpool(X)
+        X = self.dropout(X)
+        logger.debug(f"NewConvBlock layer1: {X.shape}")
 
         X = self.conv1(X)
         X = F.gelu(self.batchnorm1(X))
+        X = self.avgpool(X)
+        X = self.dropout(X)
+        logger.debug(f"NewConvBlock layer2: {X.shape}")
 
-        return self.dropout(X)
+        X = self.conv2(X)
+        X = F.gelu(self.batchnorm2(X))
+        X = self.avgpool(X)
+        X = self.dropout(X)
+        logger.debug(f"NewConvBlock layer3: {X.shape}")
+
+        return X
 
 
 class NewConvClassifier(nn.Module):
@@ -115,16 +131,14 @@ class NewConvClassifier(nn.Module):
     ) -> None:
         super().__init__()
 
-        self.spec = T.Spectrogram(n_fft=64, win_length=32, hop_length=3)
+        # dim = [channel, 94, 94]
+        self.spec = T.Spectrogram(n_fft=186, win_length=32, hop_length=3)
 
-        self.blocks = nn.Sequential(
-            NewConvBlock(in_channels, hid_dim),
-            NewConvBlock(hid_dim, hid_dim),
-        )
+        self.blocks = NewConvBlock(in_channels, hid_dim)
 
         self.head = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(hid_dim * 25 * 86, num_classes),
+            nn.Linear(hid_dim * 8 * 8, num_classes),
         )
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
