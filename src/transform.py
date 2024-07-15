@@ -5,6 +5,9 @@ Continuous wavelet transform (CWT) in PyTorch
 https://www.kaggle.com/code/anjum48/continuous-wavelet-transform-cwt-in-pytorch#PyTorch-implementation
 """
 
+import math
+from typing import List, Optional, Tuple
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -301,14 +304,6 @@ class CWT(nn.Module):
 
 # Conv2d w/ Same Padding
 
-import math
-from typing import List, Optional, Tuple
-
-import torch.nn as nn
-import torch.nn.functional as F
-
-# from .padding import pad_same, get_padding_value
-
 
 # Dynamically pad input x with 'SAME' padding for conv with specified args
 def pad_same(x, k: List[int], s: List[int], d: List[int] = (1, 1), value: float = 0):
@@ -317,7 +312,7 @@ def pad_same(x, k: List[int], s: List[int], d: List[int] = (1, 1), value: float 
         iw, k[1], s[1], d[1]
     )
     if pad_h > 0 or pad_w > 0:
-        x = F.pad(
+        x = torch.nn.functional.pad(
             x,
             [pad_w // 2, pad_w - pad_w // 2, pad_h // 2, pad_h - pad_h // 2],
             value=value,
@@ -340,10 +335,10 @@ def conv2d_same(
     groups: int = 1,
 ):
     x = pad_same(x, weight.shape[-2:], stride, dilation)
-    return F.conv2d(x, weight, bias, stride, (0, 0), dilation, groups)
+    return torch.nn.functional.conv2d(x, weight, bias, stride, (0, 0), dilation, groups)
 
 
-class Conv2dSame(nn.Conv2d):
+class Conv2dSame(torch.nn.Conv2d):
     """Tensorflow like 'SAME' convolution wrapper for 2D convolutions"""
 
     def __init__(

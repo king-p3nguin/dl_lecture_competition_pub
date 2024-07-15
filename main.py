@@ -1,6 +1,8 @@
 import os
 import sys
 
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+
 import hydra
 import hydra.core.hydra_config
 import numpy as np
