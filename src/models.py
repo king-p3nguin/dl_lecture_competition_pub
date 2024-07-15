@@ -149,6 +149,7 @@ class NewConvClassifier(nn.Module):
             nn.Flatten(),
             nn.Linear(hid_dim * 8 * 8, num_classes),
         )
+        self.head.apply(init_weights)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """_summary_
