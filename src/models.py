@@ -127,7 +127,7 @@ class NewConvBlock(nn.Module):
 
 def init_weights(m):  # Heの初期化によりnanを回避
     if type(m) == nn.Linear or type(m) == nn.Conv2d:
-        torch.nn.init.kaiming_normal_(m.weight)
+        torch.nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
         m.bias.data.fill_(0.0)
 
 
