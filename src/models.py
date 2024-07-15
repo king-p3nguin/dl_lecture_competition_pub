@@ -77,15 +77,13 @@ class ConvBlock(nn.Module):
         return self.dropout(X)
 
 
-# 参考：
-# https://github.com/torcheeg/torcheeg/blob/9c2c2dd333ca5a92ea7d255dc07a9525d2df803f/torcheeg/models/cnn/eegnet.py
 class NewConvBlock(nn.Module):
     def __init__(
         self,
         in_dim,
         out_dim,
         kernel_size: int = 3,
-        p_drop: float = 0.5,
+        p_drop: float = 0.1,
     ) -> None:
         logger.debug(f"NewConvBlock: in_dim={in_dim}, out_dim={out_dim}")
         super().__init__()
@@ -93,37 +91,27 @@ class NewConvBlock(nn.Module):
         self.in_dim = in_dim
         self.out_dim = out_dim
 
-        self.conv0 = nn.Conv2d(in_dim, out_dim, kernel_size, padding="same")
-        self.conv1 = nn.Conv2d(out_dim, out_dim, kernel_size, padding="same")
-        # self.conv2 = nn.Conv1d(out_dim, out_dim, kernel_size) # , padding="same")
+        self.conv0 = nn.Conv2d(in_dim, out_dim, kernel_size)
+        self.conv1 = nn.Conv2d(out_dim, out_dim, kernel_size)
 
         self.batchnorm0 = nn.BatchNorm2d(num_features=out_dim)
         self.batchnorm1 = nn.BatchNorm2d(num_features=out_dim)
 
-        self.avgpool = nn.AvgPool2d(kernel_size=kernel_size)
-
         self.dropout = nn.Dropout(p_drop)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
-        if self.in_dim == self.out_dim:
-            X = self.conv0(X) + X  # skip connection
-        else:
-            X = self.conv0(X)
-
+        X = self.conv0(X)
         X = F.gelu(self.batchnorm0(X))
 
-        X = self.conv1(X) + X  # skip connection
+        X = self.conv1(X)
         X = F.gelu(self.batchnorm1(X))
-
-        # X = self.conv2(X)
-        # X = F.glu(X, dim=-2)
 
         return self.dropout(X)
 
 
 class NewConvClassifier(nn.Module):
     def __init__(
-        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 64
+        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 271
     ) -> None:
         super().__init__()
 
@@ -135,11 +123,8 @@ class NewConvClassifier(nn.Module):
         )
 
         self.head = nn.Sequential(
-            nn.AdaptiveAvgPool2d((hid_dim, 1)),
-            Rearrange("b c d 1 -> b c d"),
-            nn.AdaptiveAvgPool2d((hid_dim, 1)),
-            Rearrange("b c 1 -> b c"),
-            nn.Linear(hid_dim, num_classes),
+            nn.Flatten(),
+            nn.Linear(hid_dim * 25 * 86, num_classes),
         )
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
