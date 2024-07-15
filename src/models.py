@@ -6,6 +6,8 @@ import torch.nn.functional as F
 import torchaudio.transforms as T
 from einops.layers.torch import Rearrange
 
+from transform import CWT
+
 logger = logging.getLogger(__name__)
 
 
@@ -127,24 +129,37 @@ class NewConvBlock(nn.Module):
 
 class NewConvClassifier(nn.Module):
     def __init__(
-        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 128
+        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 64
     ) -> None:
         super().__init__()
+        self.hid_dim = hid_dim
+        self.seq_len = seq_len
+        self.in_channels = in_channels
 
         # dim = [channel, 94, 94]
         self.spec = nn.Sequential(
-            T.Spectrogram(n_fft=186, win_length=32, hop_length=3, normalized=True),
-            T.AmplitudeToDB(),
+            # T.Spectrogram(n_fft=186, win_length=32, hop_length=3, normalized=True),
+            # T.AmplitudeToDB(),
+            CWT(hop_length=2),
         )
 
         self.blocks = NewConvBlock(in_channels, hid_dim)
 
         self.head = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(hid_dim * 8 * 8, 1024),
+            nn.Flatten(start_dim=1),
+            nn.Linear(self.feature_dim(), 1024),
             nn.GELU(),
             nn.Linear(1024, num_classes),
         )
+
+    def feature_dim(self):
+        with torch.no_grad():
+            mock_tensor = torch.zeros(1, self.in_channels, self.seq_len)
+
+            mock_tensor = self.spec(mock_tensor)
+            mock_tensor = self.blocks(mock_tensor)
+
+        return mock_tensor.shape[1] * mock_tensor.shape[2] * mock_tensor.shape[3]
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """_summary_
@@ -323,12 +338,12 @@ if __name__ == "__main__":
         row_settings=["var_names"],
     )
 
-    model = EEGNet(num_classes=num_classes, seq_len=seq_len, num_electrodes=in_channels)
+    # model = EEGNet(num_classes=num_classes, seq_len=seq_len, num_electrodes=in_channels)
 
-    summary(
-        model,
-        input_size=(batch_size, in_channels, seq_len),
-        col_names=["input_size", "output_size", "num_params", "mult_adds"],
-        depth=3,
-        row_settings=["var_names"],
-    )
+    # summary(
+    #     model,
+    #     input_size=(batch_size, in_channels, seq_len),
+    #     col_names=["input_size", "output_size", "num_params", "mult_adds"],
+    #     depth=3,
+    #     row_settings=["var_names"],
+    # )
