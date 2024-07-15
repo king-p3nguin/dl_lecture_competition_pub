@@ -26,7 +26,7 @@ def run(args: DictConfig):
     torch.backends.cudnn.benchmark = True
 
     # only for debugging
-    torch.autograd.set_detect_anomaly(True)
+    # torch.autograd.set_detect_anomaly(True)
 
     set_seed(args.seed)
     logdir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
