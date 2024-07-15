@@ -120,7 +120,7 @@ class NewConvBlock(nn.Module):
 
 class NewConvClassifier(nn.Module):
     def __init__(
-        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 64
+        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 128
     ) -> None:
         super().__init__()
 
@@ -129,13 +129,12 @@ class NewConvClassifier(nn.Module):
             ConvBlock(in_channels, hid_dim, p_drop=0.5),
             ConvBlock(hid_dim, hid_dim * 2, p_drop=0.5),
             ConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.5),
-            ConvBlock(hid_dim * 3, hid_dim * 4, p_drop=0.5),
         )
 
         self.head = nn.Sequential(
             nn.AdaptiveMaxPool1d(1),
             Rearrange("b d 1 -> b d"),
-            nn.Linear(hid_dim * 4, num_classes),
+            nn.Linear(hid_dim * 3, num_classes),
         )
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
