@@ -125,6 +125,12 @@ class NewConvBlock(nn.Module):
         return X
 
 
+def init_weights(m):  # Heの初期化によりnanを回避
+    if type(m) == nn.Linear or type(m) == nn.Conv2d:
+        torch.nn.init.kaiming_normal_(m.weight)
+        m.bias.data.fill_(0.0)
+
+
 class NewConvClassifier(nn.Module):
     def __init__(
         self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 128
@@ -137,6 +143,7 @@ class NewConvClassifier(nn.Module):
         )
 
         self.blocks = NewConvBlock(in_channels, hid_dim)
+        self.blocks.apply(init_weights)
 
         self.head = nn.Sequential(
             nn.Flatten(),
