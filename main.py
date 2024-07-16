@@ -90,6 +90,13 @@ def run(args: DictConfig):
                 y_pred = model(X)
                 loss = F.cross_entropy(y_pred, y)
 
+                alpha = 0.01  # 正則化パラメータ
+                # L2正則化
+                l2 = torch.tensor(0.0, requires_grad=True)
+                for w in model.parameters():
+                    l2 = l2 + torch.norm(w) ** 2
+                loss = loss + alpha * l2
+
             train_loss.append(loss.item())
 
             optimizer.zero_grad(set_to_none=True)
