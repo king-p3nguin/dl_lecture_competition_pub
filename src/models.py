@@ -83,7 +83,7 @@ class NewConvBlock(nn.Module):
         self,
         in_dim,
         out_dim,
-        kernel_size: int = 16,
+        kernel_size: int,
         p_drop: float = 0.1,
     ) -> None:
         super().__init__()
@@ -128,8 +128,8 @@ class NewConvClassifier(nn.Module):
 
         self.blocks = nn.Sequential(
             Rearrange("b c t -> b 1 c t"),
-            NewConvBlock(1, 16, p_drop=0.5),
-            NewConvBlock(16, 32, p_drop=0.5),
+            NewConvBlock(1, 16, kernel_size=64, p_drop=0.5),
+            NewConvBlock(16, 32, kernel_size=16, p_drop=0.5),
         )
 
         self.head = nn.Sequential(
