@@ -124,15 +124,16 @@ class NewConvClassifier(nn.Module):
         super().__init__()
 
         self.blocks = nn.Sequential(
-            NewConvBlock(in_channels, hid_dim, p_drop=0.3),
-            NewConvBlock(hid_dim, hid_dim * 2, p_drop=0.3),
-            NewConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.3),
+            NewConvBlock(in_channels, hid_dim, p_drop=0.4),
+            NewConvBlock(hid_dim, hid_dim * 2, p_drop=0.4),
+            NewConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.4),
+            NewConvBlock(hid_dim * 3, hid_dim * 4, p_drop=0.4),
         )
 
         self.head = nn.Sequential(
             nn.AdaptiveAvgPool1d(1),
             Rearrange("b d 1 -> b d"),
-            nn.Linear(hid_dim * 3, num_classes),
+            nn.Linear(hid_dim * 4, num_classes),
         )
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
