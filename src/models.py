@@ -124,9 +124,9 @@ class NewConvClassifier(nn.Module):
         super().__init__()
 
         self.blocks = nn.Sequential(
-            NewConvBlock(in_channels, hid_dim, p_drop=0.25),
-            NewConvBlock(hid_dim, hid_dim * 2, p_drop=0.25),
-            NewConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.25),
+            NewConvBlock(in_channels, hid_dim, p_drop=0.3),
+            NewConvBlock(hid_dim, hid_dim * 2, p_drop=0.3),
+            NewConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.3),
         )
 
         self.head = nn.Sequential(
@@ -142,6 +142,9 @@ class NewConvClassifier(nn.Module):
         Returns:
             X ( b, num_classes ): _description_
         """
+        # baseline correction
+        X -= X[:, :, :30].mean(dim=2, keepdim=True)
+
         X = self.blocks(X)
 
         return self.head(X)
