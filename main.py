@@ -17,7 +17,7 @@ from torchmetrics import Accuracy
 from tqdm import tqdm
 
 from src.datasets import ThingsMEGDataset
-from src.models import EEGNet
+from src.models import NewConvClassifier
 from src.utils import set_seed
 
 
@@ -57,9 +57,9 @@ def run(args: DictConfig):
     # ------------------
     #       Model
     # ------------------
-    model = EEGNet(train_set.num_classes, train_set.seq_len, train_set.num_channels).to(
-        args.device
-    )
+    model = NewConvClassifier(
+        train_set.num_classes, train_set.seq_len, train_set.num_channels
+    ).to(args.device)
 
     # ------------------
     #     Optimizer

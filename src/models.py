@@ -5,7 +5,6 @@ import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision.transforms as T
 from einops.layers.torch import Rearrange
 
 logger = logging.getLogger(__name__)
@@ -125,10 +124,9 @@ class NewConvClassifier(nn.Module):
         super().__init__()
 
         self.blocks = nn.Sequential(
-            T.Normalize(mean=0.5, std=0.5),  # to avoid nan during training
-            NewConvBlock(in_channels, hid_dim, p_drop=0.5),
-            NewConvBlock(hid_dim, hid_dim * 2, p_drop=0.5),
-            NewConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.5),
+            NewConvBlock(in_channels, hid_dim, p_drop=0.25),
+            NewConvBlock(hid_dim, hid_dim * 2, p_drop=0.25),
+            NewConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.25),
         )
 
         self.head = nn.Sequential(
@@ -163,6 +161,8 @@ class Conv2dWithConstraint(nn.Conv2d):
 
 class EEGNet(nn.Module):
     r"""
+    https://github.com/torcheeg/torcheeg/blob/9c2c2dd333ca5a92ea7d255dc07a9525d2df803f/torcheeg/models/cnn/eegnet.py
+
     Args:
         seq_len (int): Number of data points included in each EEG chunk, i.e., T in the paper.
         in_channels (int): The number of electrodes, i.e., C in the paper.
@@ -254,13 +254,6 @@ class EEGNet(nn.Module):
         return mock_eeg.shape[1] * mock_eeg.shape[3]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        r"""
-        Args:
-            x (torch.Tensor): EEG signal representation, the ideal input shape is [n, 60, 151]. Here, n corresponds to the batch size, 60 corresponds to in_channels, and 151 corresponds to seq_len.
-
-        Returns:
-            torch.Tensor[number of sample, number of classes]: the predicted probability that the samples belong to the classes.
-        """
         x = x.unsqueeze(1)
         x = self.block1(x)
         logger.debug(f"block1: {x.shape}")
