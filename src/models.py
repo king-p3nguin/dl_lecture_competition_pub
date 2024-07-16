@@ -83,7 +83,7 @@ class NewConvBlock(nn.Module):
         self,
         in_dim,
         out_dim,
-        kernel_size: int,
+        kernel_size: int = 3,
         p_drop: float = 0.1,
     ) -> None:
         super().__init__()
@@ -91,60 +91,52 @@ class NewConvBlock(nn.Module):
         self.in_dim = in_dim
         self.out_dim = out_dim
 
-        self.block = nn.Sequential(
-            nn.Conv2d(
-                in_channels=in_dim,
-                out_channels=in_dim,
-                kernel_size=(1, kernel_size),
-                stride=1,
-                padding=(0, kernel_size // 2),
-                bias=False,
-                groups=in_dim,
-            ),
-            nn.Conv2d(
-                in_channels=in_dim,
-                out_channels=out_dim,
-                kernel_size=1,
-                padding=(0, 0),
-                groups=1,
-                bias=False,
-                stride=1,
-            ),
-            nn.BatchNorm2d(out_dim, momentum=0.01, affine=True, eps=1e-3),
-            nn.GELU(),
-            nn.AvgPool2d((1, 8), stride=8),
-            nn.Dropout(p=p_drop),
-        )
+        self.conv0 = nn.Conv1d(in_dim, out_dim, kernel_size, padding="same")
+        self.conv1 = nn.Conv1d(out_dim, out_dim, kernel_size, padding="same")
+        # self.conv2 = nn.Conv1d(out_dim, out_dim, kernel_size) # , padding="same")
+
+        self.batchnorm0 = nn.BatchNorm1d(num_features=out_dim)
+        self.batchnorm1 = nn.BatchNorm1d(num_features=out_dim)
+
+        self.dropout = nn.Dropout(p_drop)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
-        return self.block(X)
+        if self.in_dim == self.out_dim:
+            X = self.conv0(X) + X  # skip connection
+        else:
+            X = self.conv0(X)
+
+        X = F.gelu(self.batchnorm0(X))
+
+        X = self.conv1(X) + X  # skip connection
+        X = F.gelu(self.batchnorm1(X))
+
+        # X = self.conv2(X)
+        # X = F.glu(X, dim=-2)
+
+        return self.dropout(X)
 
 
 class NewConvClassifier(nn.Module):
-    def __init__(self, num_classes: int, seq_len: int, in_channels: int) -> None:
+    def __init__(
+        self, num_classes: int, seq_len: int, in_channels: int, hid_dim: int = 128
+    ) -> None:
         super().__init__()
-        self.seq_len = seq_len
-        self.in_channels = in_channels
 
         self.blocks = nn.Sequential(
-            Rearrange("b c t -> b 1 c t"),
-            NewConvBlock(1, 16, kernel_size=64, p_drop=0.5),
-            NewConvBlock(16, 32, kernel_size=16, p_drop=0.5),
+            NewConvBlock(in_channels, hid_dim, p_drop=0.4),
+            NewConvBlock(hid_dim, hid_dim * 2, p_drop=0.4),
+            NewConvBlock(hid_dim * 2, hid_dim * 2, p_drop=0.4),
+            NewConvBlock(hid_dim * 2, hid_dim * 3, p_drop=0.4),
+            NewConvBlock(hid_dim * 3, hid_dim * 3, p_drop=0.4),
+            NewConvBlock(hid_dim * 3, hid_dim * 4, p_drop=0.4),
         )
 
         self.head = nn.Sequential(
-            nn.Flatten(start_dim=1),
-            nn.Linear(self.feature_dim(), num_classes),
+            nn.AdaptiveAvgPool1d(1),
+            Rearrange("b d 1 -> b d"),
+            nn.Linear(hid_dim * 4, num_classes),
         )
-
-    def feature_dim(self):
-        with torch.no_grad():
-            mock_tensor = torch.zeros(1, self.in_channels, self.seq_len)
-
-            mock_tensor = self.blocks(mock_tensor)
-            logger.debug(f"mock_tensor: {mock_tensor.shape}")
-
-        return mock_tensor.shape[1] * mock_tensor.shape[2] * mock_tensor.shape[3]
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """_summary_
@@ -314,7 +306,7 @@ if __name__ == "__main__":
         model,
         input_size=(batch_size, in_channels, seq_len),
         col_names=["input_size", "output_size", "num_params", "mult_adds"],
-        depth=4,
+        depth=3,
         row_settings=["var_names"],
     )
 
