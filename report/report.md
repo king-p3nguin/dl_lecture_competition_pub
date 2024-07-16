@@ -1,6 +1,6 @@
 # データの前処理と畳み込み層の追加による畳み込みニューラルネットワークを用いた脳波分類の精度改善
 
-名前：通岡知輝
+名前：通岡知輝　URL： <https://github.com/king-p3nguin/dl_lecture_competition_pub/tree/MEG-competition>
 
 ## 実装で工夫した点
 
